@@ -1,53 +1,59 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const path = require('path');
 
 const app = express();
-const db = new Database('extrato.db');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Cria a tabela se não existir
-db.exec(`
-  CREATE TABLE IF NOT EXISTS lancamentos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    data TEXT NOT NULL,
-    descricao TEXT NOT NULL,
-    valor REAL NOT NULL,
-    tipo TEXT NOT NULL
-  )
-`);
+async function iniciarBanco() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lancamentos (
+      id SERIAL PRIMARY KEY,
+      data TEXT NOT NULL,
+      descricao TEXT NOT NULL,
+      valor REAL NOT NULL,
+      tipo TEXT NOT NULL
+    )
+  `);
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Busca todos os lançamentos
-app.get('/lancamentos', (req, res) => {
-  const rows = db.prepare('SELECT * FROM lancamentos ORDER BY id ASC').all();
-  res.json(rows);
+app.get('/lancamentos', async (req, res) => {
+  const result = await pool.query('SELECT * FROM lancamentos ORDER BY id ASC');
+  res.json(result.rows);
 });
 
 // Cria novo lançamento
-app.post('/lancamentos', (req, res) => {
+app.post('/lancamentos', async (req, res) => {
   const { descricao, valor, tipo } = req.body;
 
   if (!descricao || !valor || !tipo) {
     return res.status(400).json({ erro: 'Campos obrigatórios faltando.' });
   }
 
-  const stmt = db.prepare(
-    'INSERT INTO lancamentos (data, descricao, valor, tipo) VALUES (?, ?, ?, ?)'
+  const result = await pool.query(
+    'INSERT INTO lancamentos (data, descricao, valor, tipo) VALUES ($1, $2, $3, $4) RETURNING *',
+    [new Date().toISOString(), descricao, parseFloat(valor), tipo]
   );
 
-  const result = stmt.run(
-    new Date().toISOString(),
-    descricao,
-    parseFloat(valor),
-    tipo
-  );
-
-  const novo = db.prepare('SELECT * FROM lancamentos WHERE id = ?').get(result.lastInsertRowid);
-  res.json(novo);
+  res.json(result.rows[0]);
 });
 
-app.listen(3000, () => {
-  console.log('Servidor rodando em http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+
+iniciarBanco().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  });
 });
+```
+
+Salva. Depois no terminal:
+```
+cd extrato
+npm install pg --save
+npm uninstall better-sqlite3
