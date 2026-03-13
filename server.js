@@ -5,7 +5,6 @@ const path = require('path');
 const app = express();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Cria a tabela se não existir
 async function iniciarBanco() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS lancamentos (
@@ -21,13 +20,11 @@ async function iniciarBanco() {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Busca todos os lançamentos
 app.get('/lancamentos', async (req, res) => {
   const result = await pool.query('SELECT * FROM lancamentos ORDER BY id ASC');
   res.json(result.rows);
 });
 
-// Cria novo lançamento
 app.post('/lancamentos', async (req, res) => {
   const { descricao, valor, tipo } = req.body;
 
@@ -52,8 +49,8 @@ iniciarBanco().then(() => {
 });
 ```
 
-Salva. Depois no terminal:
+Salva. Depois no PowerShell dentro da pasta extrato:
 ```
-cd extrato
-npm install pg --save
-npm uninstall better-sqlite3
+git add .
+git commit -m "corrige server.js"
+git push
