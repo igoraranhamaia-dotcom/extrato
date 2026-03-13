@@ -1,0 +1,18 @@
+[phases.setup]
+nixPkgs = ["nodejs", "python3", "gcc", "gnumake"]
+```
+
+Salva como `nixpacks.toml` na pasta `C:\Users\maia_\extrato`.
+
+Depois manda pro GitHub:
+```
+cd extrato
+```
+```
+git add .
+```
+```
+git commit -m "adiciona nixpacks"
+```
+```
+git push
